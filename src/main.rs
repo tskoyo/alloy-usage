@@ -1,4 +1,5 @@
-use alloy::primitives::address;
+use alloy::eips::{BlockId, BlockNumHash};
+use alloy::primitives::{U256, address};
 use alloy::providers::{Provider, ProviderBuilder};
 use alloy::rpc::types::Filter;
 use alloy::sol;
@@ -31,21 +32,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pair_addr = address!("B4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc");
     let pair = IUniswapV2Pair::new(pair_addr, &provider);
 
-    let reserves = pair.getReserves().call().await?;
     let token0 = pair.token0().call().await?;
     let token1 = pair.token1().call().await?;
 
-    let reserve0 = reserves.reserve0;
-    let reserve1 = reserves.reserve1;
-
     println!("Token0: {token0}");
     println!("Token1: {token1}");
-
-    let usdc = reserve0.to::<u128>() as f64 / 1e6;
-    let weth = reserve1.to::<u128>() as f64 / 1e18;
-
-    println!("USDC Reserve: {usdc}");
-    println!("WETH Reserve: {weth}");
 
     let filter = Filter::new()
         .address(pair_addr)
@@ -59,24 +50,83 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let swap = IUniswapV2Pair::Swap::decode_log(log.as_ref())?;
         let tx_hash = log.transaction_hash.unwrap_or(Default::default());
 
+        let block_num = log.block_number.unwrap_or_default();
+        let reserves = pair
+            .getReserves()
+            .block(BlockId::number(block_num - 1))
+            .call()
+            .await?;
+
+        let reserve0 = U256::from(reserves.reserve0.to::<u128>());
+        let reserve1 = U256::from(reserves.reserve1.to::<u128>());
+
+        let amount0_in: U256 = swap.amount0In.into();
+        let amount0_out: U256 = swap.amount0Out.into();
+        let amount1_in: U256 = swap.amount1In.into();
+        let amount1_out: U256 = swap.amount1Out.into();
+
+        let fee_numerator = U256::from(997u64);
+        let fee_denominator = U256::from(1000u64);
+
+        // formula: amountOut = (amountIn * 997 * reserveOut) / (reserveIn * 1000 + amountIn * 997)
+        let (computed_out, actual_out, label) = if amount0_in > U256::ZERO {
+            let computed_amount1_out = (amount0_in * fee_numerator * reserve1)
+                / (reserve0 * fee_denominator + amount0_in * fee_numerator);
+            (computed_amount1_out, amount1_out, "amount1Out")
+        } else {
+            let computed_amount0_out = (amount1_in * fee_numerator * reserve0)
+                / (reserve1 * fee_denominator + amount1_in * fee_numerator);
+            (computed_amount0_out, amount0_out, "amount0Out")
+        };
+
+        if computed_out == actual_out {
+            println!("Swap matches Uniswap V2 formula, tx hash: {}", tx_hash);
+        }
+
+        if amount0_in > U256::ZERO && computed_out != actual_out {
+            println!(
+                "Discrepancy detected in swapping (USDC -> WETH), tx hash: {}",
+                tx_hash
+            );
+            println!(
+                "Computed {label}: {}",
+                computed_out.to::<u128>() as f64 / 1e18
+            );
+            println!(
+                "Actual {label}:   {}",
+                actual_out.to::<u128>() as f64 / 1e18
+            );
+        } else if amount1_in > U256::ZERO && computed_out != actual_out {
+            println!(
+                "Discrepancy detected in swapping (WETH -> USDC), tx hash: {}",
+                tx_hash
+            );
+            println!(
+                "Computed {label}: {}",
+                computed_out.to::<u128>() as f64 / 1e6
+            );
+            println!("Actual {label}:   {}", actual_out.to::<u128>() as f64 / 1e6);
+        }
+
         println!("---");
         println!("tx hash:     {}", tx_hash);
+        println!("block number: {}", block_num);
         println!("sender:     {}", swap.sender);
         println!(
             "amount0In:  {}",
-            format!("{}", swap.amount0In.to::<u128>() as f64 / 1e6)
+            format!("{}", amount0_in.to::<u128>() as f64 / 1e6)
         );
         println!(
             "amount1In:  {}",
-            format!("{}", swap.amount1In.to::<u128>() as f64 / 1e18)
+            format!("{}", amount1_in.to::<u128>() as f64 / 1e18)
         );
         println!(
             "amount0Out: {}",
-            format!("{}", swap.amount0Out.to::<u128>() as f64 / 1e6)
+            format!("{}", amount0_out.to::<u128>() as f64 / 1e6)
         );
         println!(
             "amount1Out: {}",
-            format!("{}", swap.amount1Out.to::<u128>() as f64 / 1e18)
+            format!("{}", amount1_out.to::<u128>() as f64 / 1e18)
         );
         println!("to:         {}", swap.to);
     }
