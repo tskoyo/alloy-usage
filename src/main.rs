@@ -1,4 +1,4 @@
-use alloy::primitives::{U256, address};
+use alloy::primitives::address;
 use alloy::providers::{Provider, ProviderBuilder};
 use alloy::rpc::types::Filter;
 use alloy::sol;
@@ -59,18 +59,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let swap = IUniswapV2Pair::Swap::decode_log(log.as_ref())?;
         let tx_hash = log.transaction_hash.unwrap_or(Default::default());
 
-        let amount0_in: U256 = swap.amount0In.into();
-        let amount1_in: U256 = swap.amount1In.into();
-        let amount0_out: U256 = swap.amount0Out.into();
-        let amount1_out: U256 = swap.amount1Out.into();
-
         println!("---");
         println!("tx hash:     {}", tx_hash);
         println!("sender:     {}", swap.sender);
-        println!("amount0In:  {}", amount0_in);
-        println!("amount1In:  {}", amount1_in);
-        println!("amount0Out: {}", amount0_out);
-        println!("amount1Out: {}", amount1_out);
+        println!(
+            "amount0In:  {}",
+            format!("{}", swap.amount0In.to::<u128>() as f64 / 1e6)
+        );
+        println!(
+            "amount1In:  {}",
+            format!("{}", swap.amount1In.to::<u128>() as f64 / 1e18)
+        );
+        println!(
+            "amount0Out: {}",
+            format!("{}", swap.amount0Out.to::<u128>() as f64 / 1e6)
+        );
+        println!(
+            "amount1Out: {}",
+            format!("{}", swap.amount1Out.to::<u128>() as f64 / 1e18)
+        );
         println!("to:         {}", swap.to);
     }
 
