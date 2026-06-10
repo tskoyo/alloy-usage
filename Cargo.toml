@@ -3,7 +3,15 @@ name = "alloy-usage"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
+[workspace]
+members = ["crates/*"]
+
+[workspace.dependencies]
 alloy = { version = "2", features = ["full"] }
 tokio = { version = "1.52.3", features = ["full"] }
 eyre = "0.6"
+
+[dependencies]
+alloy = { workspace = true }
+tokio = { workspace = true }
+eyre = { workspace = true }
