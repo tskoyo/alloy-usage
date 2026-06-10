@@ -1,0 +1,10 @@
+[package]
+name = "mainnet-fork"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { workspace = true }
+alloy = { workspace = true }
+eyre = { workspace = true }
+revm = { version = "40", features = ["alloydb"] }
