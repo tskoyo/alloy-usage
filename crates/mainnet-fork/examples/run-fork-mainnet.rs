@@ -64,6 +64,7 @@ async fn main() -> Result<()> {
     println!("Reserves read THROUGH revm (forked at block 22600000):");
     println!("reserve0 (USDC): {}", reserves.reserve0);
     println!("reserve1 (WETH): {}", reserves.reserve1);
+    println!("blockTimestampLast: {}", reserves.blockTimestampLast);
 
     Ok(())
 }
