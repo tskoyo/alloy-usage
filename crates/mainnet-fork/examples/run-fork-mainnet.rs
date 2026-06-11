@@ -23,7 +23,6 @@ async fn main() -> Result<()> {
     dotenv().ok();
 
     let rpc_url = std::env::var("ALCHEMY_RPC_URL").expect("ALCHEMY_RPC_URL must be set in .env");
-    println!("Rpc url is: {}", rpc_url);
     let provider = ProviderBuilder::new().connect(&rpc_url).await?;
 
     // Fork at a specific block. AlloyDB lazily fetches state from the provider.
