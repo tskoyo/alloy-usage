@@ -9,6 +9,7 @@ members = ["crates/*"]
 [workspace.dependencies]
 alloy = { version = "2", features = ["full"] }
 tokio = { version = "1.52.3", features = ["full"] }
+dotenv = "0.15.0"
 eyre = "0.6"
 
 [dependencies]

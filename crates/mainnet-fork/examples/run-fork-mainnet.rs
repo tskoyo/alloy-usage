@@ -3,6 +3,7 @@ use alloy::primitives::{Address, Bytes, TxKind, U256, address};
 use alloy::providers::ProviderBuilder;
 use alloy::sol;
 use alloy::sol_types::SolCall;
+use dotenv::dotenv;
 use eyre::{Result, eyre};
 use revm::context::TxEnv;
 use revm::context::result::{ExecutionResult, Output};
@@ -19,8 +20,11 @@ sol! {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let rpc_url = "https://eth-mainnet.g.alchemy.com/v2/zonUBZKgwbwydPXz3xwGA";
-    let provider = ProviderBuilder::new().connect(rpc_url).await?;
+    dotenv().ok();
+
+    let rpc_url = std::env::var("ALCHEMY_RPC_URL").expect("ALCHEMY_RPC_URL must be set in .env");
+    println!("Rpc url is: {}", rpc_url);
+    let provider = ProviderBuilder::new().connect(&rpc_url).await?;
 
     // Fork at a specific block. AlloyDB lazily fetches state from the provider.
     // WrapDatabaseAsync bridges the async provider into revm's sync Database trait.
