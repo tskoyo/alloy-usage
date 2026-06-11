@@ -62,8 +62,8 @@ async fn main() -> Result<()> {
     let reserves = IUniswapV2Pair::getReservesCall::abi_decode_returns(&output)?;
 
     println!("Reserves read THROUGH revm (forked at block 22600000):");
-    println!("  reserve0 (USDC): {}", reserves.reserve0);
-    println!("  reserve1 (WETH): {}", reserves.reserve1);
+    println!("reserve0 (USDC): {}", reserves.reserve0);
+    println!("reserve1 (WETH): {}", reserves.reserve1);
 
     Ok(())
 }
