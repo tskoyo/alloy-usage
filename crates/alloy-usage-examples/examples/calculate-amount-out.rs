@@ -4,6 +4,7 @@ use alloy::providers::{Provider, ProviderBuilder};
 use alloy::rpc::types::Filter;
 use alloy::sol;
 use alloy::sol_types::SolEvent;
+use dotenv::dotenv;
 use eyre::Result;
 
 sol! {
@@ -26,8 +27,9 @@ sol! {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let rpc_url = "https://eth-mainnet.g.alchemy.com/v2/zonUBZKgwbwydPXz3xwGA";
-    let provider = ProviderBuilder::new().connect(rpc_url).await?;
+    dotenv().ok();
+    let rpc_url = std::env::var("ALCHEMY_RPC_URL")?;
+    let provider = ProviderBuilder::new().connect(&rpc_url).await?;
 
     let pair_addr = address!("B4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc");
     let pair = IUniswapV2Pair::new(pair_addr, &provider);
@@ -68,7 +70,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let fee_numerator = U256::from(997u64);
         let fee_denominator = U256::from(1000u64);
 
-        // formula: amountOut = (amountIn * 997 * reserveOut) / (reserveIn * 1000 + amountIn * 997)
         let (computed_out, actual_out, label) = if amount0_in > U256::ZERO {
             let computed_amount1_out = (amount0_in * fee_numerator * reserve1)
                 / (reserve0 * fee_denominator + amount0_in * fee_numerator);

@@ -7,3 +7,4 @@ edition = "2024"
 tokio = { workspace = true }
 alloy = { workspace = true }
 eyre = { workspace = true }
+dotenv = { workspace = true }
