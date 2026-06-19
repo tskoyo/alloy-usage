@@ -44,8 +44,6 @@ async fn main() -> Result<()> {
     let cache_db = CacheDB::new(alloy_db);
 
     // 3. Replay the tx's calldata against the forked state
-
-    println!("Approve tx nonce is: {}", approve_tx.nonce());
     let approve_tx = TxEnv {
         caller: approve_tx.from(),
         kind: match approve_tx.to() {
@@ -75,8 +73,8 @@ async fn main() -> Result<()> {
     };
 
     // 4. Execute the tx
-    let mut ctx = Context::mainnet().with_db(cache_db);
-    ctx.cfg.disable_nonce_check = true;
+    let ctx = Context::mainnet().with_db(cache_db);
+    // ctx.cfg.disable_nonce_check = true;
     // ctx.cfg.disable_nonce_check = true; // Disable nonce check to allow replaying the tx
     let mut evm = ctx.build_mainnet();
     let approve_exec_result = evm.transact_one(approve_tx)?;
