@@ -1,9 +1,13 @@
 use alloy::primitives::{U256, address};
+use alloy::sol_types::{GenericRevertReason, SolCall};
 use alloy::{eips::BlockId, providers::ProviderBuilder};
 use dotenv::dotenv;
 use eyre::{Result, eyre};
-use revm::DatabaseRef;
+use revm::context::TxEnv;
+use revm::context::result::ExecutionResult;
 use revm::database::{AlloyDB, CacheDB, WrapDatabaseAsync};
+use revm::primitives::{Bytes, TxKind};
+use revm::{Context, ExecuteCommitEvm, MainBuilder, MainContext};
 
 #[path = "common/mod.rs"]
 mod common;
@@ -23,7 +27,7 @@ async fn main() -> Result<()> {
 
     let mut cache_db = CacheDB::new(alloy_db);
 
-    let weth = address!("C02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
+    // let weth = address!("C02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
     let usdc = address!("A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48");
     let pair = address!("B4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc");
     let my_addr = address!("0000000000000000000000000000000000000001");
@@ -34,7 +38,7 @@ async fn main() -> Result<()> {
 
     let (r0_before, r1_before) = read_reserves(&mut cache_db, pair)?;
     println!(
-        "BEFORE  USDC reserve: {}  WETH reserve: {}",
+        "BEFORE  USDC reserve: {:.2}  WETH reserve: {:.4}",
         r0_before.to::<u128>() as f64 / 1e6,
         r1_before.to::<u128>() as f64 / 1e18
     );
@@ -42,11 +46,73 @@ async fn main() -> Result<()> {
     let weth_out = get_amount_out(usdc_in, r0_before, r1_before);
     println!("Expected weth out: {}", weth_out.to::<u128>() as f64 / 1e18);
 
-    let slot0 = cache_db.storage_ref(weth, U256::from(0))?;
-    println!("Slot 0 (name): {:#x}", slot0);
+    println!(
+        "Balance of my_addr before transfer: {:?} USDC",
+        read_balance(&mut cache_db, usdc, my_addr)?.to::<u128>() as f64 / 1e6
+    );
 
-    let balance = read_balance(&mut cache_db, weth, my_addr)?;
-    println!("Balance of {my_addr} is {balance} WETH");
+    let mut evm = Context::mainnet().with_db(&mut cache_db).build_mainnet();
+
+    let transfer_cd = IERC20::transferCall {
+        to: pair,
+        amount: usdc_in,
+    }
+    .abi_encode();
+
+    // evm.transact_commit(TxEnv {
+    //     caller: my_addr,
+    //     kind: TxKind::Call(usdc),
+    //     data: Bytes::from(transfer_cd),
+    //     ..Default::default()
+    // })?;
+
+    let swap_cd = IUniswapV2Pair::swapCall {
+        amount0Out: U256::ZERO,
+        amount1Out: weth_out,
+        to: my_addr,
+        data: Bytes::new(),
+    }
+    .abi_encode();
+
+    let swap_tx = evm.transact_commit(TxEnv {
+        caller: my_addr,
+        kind: TxKind::Call(pair),
+        data: Bytes::from(swap_cd),
+        ..Default::default()
+    })?;
+
+    match swap_tx {
+        ExecutionResult::Success {
+            reason: _reason,
+            gas: _gas,
+            logs: _logs,
+            output: _output,
+        } => {
+            println!("Success")
+        }
+        ExecutionResult::Revert {
+            gas: _gas,
+            logs: _logs,
+            output: _output,
+        } => {
+            if let Some(reason) = GenericRevertReason::decode(&_output) {
+                println!("Revert reason: {reason}");
+            }
+        }
+        other => println!("Other: {other:?}"),
+    }
+
+    println!(
+        "Balance of my_addr after transfer: {:?} USDC",
+        read_balance(&mut cache_db, usdc, my_addr)?.to::<u128>() as f64 / 1e6
+    );
+
+    let (r0_after, r1_after) = read_reserves(&mut cache_db, pair)?;
+    println!(
+        "AFTER   USDC: {:.2}  WETH: {:.4}",
+        r0_after.to::<u128>() as f64 / 1e6,
+        r1_after.to::<u128>() as f64 / 1e18
+    );
 
     Ok(())
 }
