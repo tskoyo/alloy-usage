@@ -94,3 +94,14 @@ where
         other => Err(eyre!("getReserves failed: {other:?}")),
     }
 }
+
+pub fn get_amount_out(amount_in: U256, reserve_in: U256, reserve_out: U256) -> U256 {
+    let fee_numerator = U256::from(997u64);
+    let fee_denominator = U256::from(1000u64);
+
+    let amount_in_with_fee = amount_in * fee_numerator;
+    let numerator = amount_in_with_fee * reserve_out;
+    let denominator = reserve_in * fee_denominator + amount_in_with_fee;
+
+    numerator / denominator
+}
