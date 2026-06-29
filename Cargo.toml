@@ -9,6 +9,7 @@ members = ["crates/*"]
 [workspace.dependencies]
 alloy = { version = "2", features = ["full"] }
 tokio = { version = "1.52.3", features = ["full"] }
+env_logger = "0.11.11"
 dotenv = "0.15.0"
 eyre = "0.6"
 
@@ -16,3 +17,4 @@ eyre = "0.6"
 alloy = { workspace = true }
 tokio = { workspace = true }
 eyre = { workspace = true }
+env_logger = { workspace = true }

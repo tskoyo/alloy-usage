@@ -8,4 +8,5 @@ tokio = { workspace = true }
 alloy = { workspace = true }
 eyre = { workspace = true }
 dotenv = { workspace = true }
+env_logger = { workspace = true }
 revm = { version = "40", features = ["alloydb"] }

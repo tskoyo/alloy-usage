@@ -16,6 +16,7 @@ use common::*;
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv().ok();
+    env_logger::init();
 
     let rpc_url = std::env::var("ALCHEMY_RPC_URL").expect("ALCHEMY_RPC_URL must be set in .env");
     let provider = ProviderBuilder::new().connect(&rpc_url).await?;
